@@ -1,0 +1,33 @@
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0*   Trying 89.169.136.99:80...
+* Connected to 89.169.136.99 (89.169.136.99) port 80
+> GET / HTTP/1.1
+> Host: 89.169.136.99
+> User-Agent: curl/8.5.0
+> Accept: */*
+> 
+< HTTP/1.1 200 OK
+< server: ycalb
+< date: Thu, 26 Nov 2026 12:50:11 GMT
+< content-type: text/html
+< content-length: 418
+< last-modified: Thu, 26 Nov 2026 12:48:43 GMT
+< etag: "6b082aab-1a2"
+< x-backend: web-2
+< accept-ranges: bytes
+< 
+{ [418 bytes data]
+100   418  100   418    0     0   2230      0 --:--:-- --:--:-- --:--:--  2235
+* Connection #0 to host 89.169.136.99 left intact
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>Курсовая работа: DevOps</title>
+</head>
+<body>
+  <h1>Курсовая работа: отказоустойчивая инфраструктура</h1>
+  <p>Статический сайт на nginx. Две одинаковые ВМ в разных зонах за балансировщиком Yandex Cloud.</p>
+</body>
+</html>
