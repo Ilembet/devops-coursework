@@ -1,0 +1,39 @@
+---
+- name: Download the exporter package
+  ansible.builtin.get_url:
+    url: >-
+      https://github.com/martin-helmich/prometheus-nginxlog-exporter/releases/download/v{{ nginxlog_exporter_version }}/prometheus-nginxlog-exporter_{{ nginxlog_exporter_version }}_linux_amd64.deb
+    dest: "/tmp/prometheus-nginxlog-exporter_{{ nginxlog_exporter_version }}.deb"
+    mode: "0644"
+
+- name: Install the exporter package
+  ansible.builtin.apt:
+    deb: "/tmp/prometheus-nginxlog-exporter_{{ nginxlog_exporter_version }}.deb"
+
+- name: Deploy the exporter config
+  ansible.builtin.copy:
+    src: prometheus-nginxlog-exporter.hcl
+    dest: /etc/prometheus-nginxlog-exporter.hcl
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart nginx log exporter
+
+- name: Deploy the exporter systemd unit
+  ansible.builtin.copy:
+    src: prometheus-nginxlog-exporter.service
+    dest: /etc/systemd/system/prometheus-nginxlog-exporter.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart nginx log exporter
+
+- name: Apply pending handlers before the final check
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start the exporter
+  ansible.builtin.systemd:
+    name: prometheus-nginxlog-exporter
+    state: started
+    enabled: true
+    daemon_reload: true

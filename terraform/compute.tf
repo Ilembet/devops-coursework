@@ -83,3 +83,75 @@ resource "yandex_compute_instance" "web" {
     ssh-keys = "ubuntu:${local.ssh_key}"
   }
 }
+
+# Monitoring: Prometheus in a private subnet, Grafana in a public one.
+resource "yandex_compute_instance" "prometheus" {
+  name        = "prometheus"
+  hostname    = "prometheus"
+  platform_id = "standard-v3"
+  zone        = var.zones[0]
+
+  resources {
+    cores         = 2
+    memory        = 2
+    core_fraction = var.vm_core_fraction
+  }
+
+  scheduling_policy {
+    preemptible = var.preemptible
+  }
+
+  boot_disk {
+    initialize_params {
+      image_id = data.yandex_compute_image.ubuntu.id
+      size     = 10
+      type     = "network-ssd"
+    }
+  }
+
+  network_interface {
+    subnet_id          = yandex_vpc_subnet.private[var.zones[0]].id
+    nat                = false
+    security_group_ids = [yandex_vpc_security_group.prometheus.id]
+  }
+
+  metadata = {
+    ssh-keys = "ubuntu:${local.ssh_key}"
+  }
+}
+
+resource "yandex_compute_instance" "grafana" {
+  name               = "grafana"
+  hostname           = "grafana"
+  platform_id        = "standard-v3"
+  zone               = var.zones[1]
+  service_account_id = var.vm_puller_sa_id
+
+  resources {
+    cores         = 2
+    memory        = 2
+    core_fraction = var.vm_core_fraction
+  }
+
+  scheduling_policy {
+    preemptible = var.preemptible
+  }
+
+  boot_disk {
+    initialize_params {
+      image_id = data.yandex_compute_image.ubuntu.id
+      size     = 10
+      type     = "network-hdd"
+    }
+  }
+
+  network_interface {
+    subnet_id          = yandex_vpc_subnet.public[var.zones[1]].id
+    nat                = true
+    security_group_ids = [yandex_vpc_security_group.grafana.id]
+  }
+
+  metadata = {
+    ssh-keys = "ubuntu:${local.ssh_key}"
+  }
+}

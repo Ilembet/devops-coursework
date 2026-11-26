@@ -13,7 +13,7 @@ Host bastion
   IdentityFile ~/.ssh/id_ed25519
   StrictHostKeyChecking accept-new
 
-Host 10.10.10.* 10.10.11.*
+Host 10.10.*
   User ubuntu
   IdentityFile ~/.ssh/id_ed25519
   ProxyJump bastion

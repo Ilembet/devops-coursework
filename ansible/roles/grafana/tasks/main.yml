@@ -1,0 +1,73 @@
+---
+- name: Check that the admin password is set
+  ansible.builtin.assert:
+    that: grafana_admin_password | length >= 8
+    fail_msg: "Export GRAFANA_ADMIN_PASSWORD (8+ characters) before running the playbook"
+
+- name: Install Docker
+  ansible.builtin.apt:
+    name: [docker.io, docker-compose-v2]
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Enable and start Docker
+  ansible.builtin.service:
+    name: docker
+    state: started
+    enabled: true
+
+- name: Log in to Yandex Container Registry with the VM service account token
+  ansible.builtin.shell: |
+    set -o pipefail
+    curl -sf -H Metadata-Flavor:Google \
+      http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token \
+      | python3 -c 'import json,sys; print(json.load(sys.stdin)["access_token"])' \
+      | docker login --username iam --password-stdin cr.yandex
+  args:
+    executable: /bin/bash
+  no_log: true
+  changed_when: false
+
+- name: Create Grafana directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - /opt/grafana/provisioning/datasources
+    - /opt/grafana/provisioning/dashboards
+    - /opt/grafana/dashboards
+
+- name: Deploy the Prometheus data source
+  ansible.builtin.template:
+    src: datasource.yml.j2
+    dest: /opt/grafana/provisioning/datasources/prometheus.yml
+    mode: "0644"
+  notify: Restart Grafana
+
+- name: Deploy the dashboard provider
+  ansible.builtin.copy:
+    src: dashboards.yml
+    dest: /opt/grafana/provisioning/dashboards/coursework.yml
+    mode: "0644"
+  notify: Restart Grafana
+
+- name: Deploy the dashboard
+  ansible.builtin.copy:
+    src: use-dashboard.json
+    dest: /opt/grafana/dashboards/use-dashboard.json
+    mode: "0644"
+
+- name: Deploy docker-compose.yml
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: /opt/grafana/docker-compose.yml
+    mode: "0600"
+
+- name: Start Grafana
+  ansible.builtin.command: docker compose up -d
+  args:
+    chdir: /opt/grafana
+  register: compose_up
+  changed_when: "'Started' in compose_up.stderr or 'Recreated' in compose_up.stderr"

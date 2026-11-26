@@ -4,3 +4,19 @@
   become: true
   roles:
     - nginx
+    - node_exporter
+    - nginx_log_exporter
+
+- name: Configure Prometheus
+  hosts: prometheus
+  become: true
+  roles:
+    - node_exporter
+    - prometheus
+
+- name: Configure Grafana
+  hosts: grafana
+  become: true
+  roles:
+    - node_exporter
+    - grafana

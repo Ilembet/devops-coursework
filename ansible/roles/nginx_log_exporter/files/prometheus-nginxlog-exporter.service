@@ -1,0 +1,13 @@
+[Unit]
+Description=Prometheus exporter for nginx access logs
+After=network.target nginx.service
+
+[Service]
+# Runs as a throwaway user that may read the nginx logs through the adm group.
+DynamicUser=yes
+SupplementaryGroups=adm
+ExecStart=/usr/bin/env prometheus-nginxlog-exporter -config-file /etc/prometheus-nginxlog-exporter.hcl
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

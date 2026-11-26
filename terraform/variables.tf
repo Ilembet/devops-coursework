@@ -33,3 +33,8 @@ variable "preemptible" {
   type        = bool
   default     = true
 }
+
+variable "vm_puller_sa_id" {
+  description = "ID of the vm-puller service account (pulls images from the container registry)"
+  type        = string
+}
