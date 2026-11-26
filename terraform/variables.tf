@@ -15,3 +15,21 @@ variable "allowed_ssh_cidr" {
   type        = string
   default     = "0.0.0.0/0"
 }
+
+variable "ssh_public_key_path" {
+  description = "Public SSH key that will be allowed to log in as the ubuntu user"
+  type        = string
+  default     = "~/.ssh/id_ed25519.pub"
+}
+
+variable "vm_core_fraction" {
+  description = "Guaranteed vCPU share, percent (20 is the cheapest for standard-v3)"
+  type        = number
+  default     = 20
+}
+
+variable "preemptible" {
+  description = "Preemptible VMs are much cheaper but can be stopped by the cloud at any time"
+  type        = bool
+  default     = true
+}
