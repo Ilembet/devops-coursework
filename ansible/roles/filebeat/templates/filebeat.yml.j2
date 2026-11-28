@@ -1,7 +1,8 @@
-# Managed by Ansible.
+# Managed by Ansible. Log source: {{ filebeat_source }}
 name: {{ inventory_hostname }}
 
 filebeat.inputs:
+{% if filebeat_source == 'nginx' %}
   - type: filestream
     id: nginx-access
     paths: [/var/log/nginx/access.log]
@@ -15,6 +16,32 @@ filebeat.inputs:
     fields:
       log_type: nginx-error
     fields_under_root: true
+{% elif filebeat_source == 'docker' %}
+  - type: filestream
+    id: docker-containers
+    paths: [/var/lib/docker/containers/*/*.log]
+    parsers:
+      - container: ~
+    fields:
+      log_type: {{ inventory_hostname }}
+    fields_under_root: true
+
+processors:
+  - add_docker_metadata: ~
+  # Filebeat's own container log is not interesting
+  - drop_event:
+      when:
+        equals:
+          container.name: filebeat
+{% elif filebeat_source == 'syslog' %}
+  - type: filestream
+    id: prometheus-syslog
+    paths: [/var/log/syslog]
+    include_lines: ['prometheus\[']
+    fields:
+      log_type: prometheus
+    fields_under_root: true
+{% endif %}
 
 output.elasticsearch:
   hosts: ["http://{{ hostvars[groups['elasticsearch'][0]].ansible_host }}:9200"]

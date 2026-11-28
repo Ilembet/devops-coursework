@@ -15,7 +15,7 @@
 | 5 | Мониторинг: Prometheus, exporters, Grafana | готово |
 | 6 | Логи: Elasticsearch, Filebeat, Kibana | готово |
 | 7 | Резервное копирование: снапшоты дисков | готово |
-| 8 | Дополнительно (по желанию) | впереди |
+| 8 | Дополнительно: оповещения Grafana, логи сервисов | готово |
 | 9 | Итоговое оформление | впереди |
 
 ## Архитектура
@@ -146,9 +146,41 @@ yc compute snapshot list --folder-name coursework --format json \
   | xargs -r -n1 yc compute snapshot delete --folder-name coursework
 ```
 
-## Этапы 8–9
+## Этап 8. Дополнительно
 
-Будут описаны по мере выполнения.
+Из дополнительных пунктов выполнены два; остальные не помещаются в квоты пробного облака
+(2 vCPU на зону) или требуют домена.
+
+**Оповещения Grafana.** Четыре правила описаны кодом (`ansible/roles/grafana/files/alerts.yml`,
+provisioning) и проверяются раз в минуту:
+
+| Правило | Условие | Ожидание |
+| --- | --- | --- |
+| Instance down | `up < 1` | 1 мин |
+| High CPU utilization | CPU > 90% | 5 мин |
+| Root disk almost full | занято больше 90% диска `/` | 5 мин |
+| HTTP 5xx responses | ответов 5xx больше 0,1 в секунду | 2 мин |
+
+Проверка: остановлен `node_exporter` на web-1 — правило Instance down перешло в Firing, после запуска вернулось
+в Normal. Канал доставки (почта, Telegram) не настроен: сработавшие правила видны в разделе Alerting.
+
+**Логи самих сервисов.** Filebeat стоит на всех ВМ, источник задаётся в `ansible/group_vars/`:
+
+- Elasticsearch, Kibana, Grafana работают в Docker — Filebeat читает логи их контейнеров
+  (`/var/lib/docker/containers`), свои собственные отбрасывает;
+- Prometheus установлен из пакетов и пишет в системный журнал — Filebeat читает `/var/log/syslog`
+  и оставляет только строки Prometheus.
+
+Поле `log_type` принимает значения `nginx-access`, `nginx-error`, `elasticsearch`, `kibana`, `grafana`, `prometheus`.
+
+![логи всех сервисов в Elasticsearch](screenshots/stage8-01-service-logs-count.png)
+![правила оповещений](screenshots/stage8-02-alerts-normal.png)
+![Instance down: Firing](screenshots/stage8-03-alert-firing.png)
+![Kibana: логи сервисов](screenshots/stage8-04-kibana-service-logs.png)
+
+## Этап 9
+
+Будет описан при сдаче.
 
 ## Решения и компромиссы
 

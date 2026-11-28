@@ -176,6 +176,27 @@ resource "yandex_vpc_security_group" "elasticsearch" {
   }
 
   ingress {
+    description       = "Elasticsearch API from Grafana (filebeat)"
+    protocol          = "TCP"
+    port              = 9200
+    security_group_id = yandex_vpc_security_group.grafana.id
+  }
+
+  ingress {
+    description       = "Elasticsearch API from Prometheus (filebeat)"
+    protocol          = "TCP"
+    port              = 9200
+    security_group_id = yandex_vpc_security_group.prometheus.id
+  }
+
+  ingress {
+    description       = "Elasticsearch API from itself (filebeat)"
+    protocol          = "TCP"
+    port              = 9200
+    predefined_target = "self_security_group"
+  }
+
+  ingress {
     description       = "SSH from the bastion"
     protocol          = "TCP"
     port              = 22

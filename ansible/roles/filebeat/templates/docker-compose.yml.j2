@@ -2,13 +2,22 @@
 services:
   filebeat:
     image: cr.yandex/crp2bs15dcqdoprk9u7b/filebeat:8.19.0
+    container_name: filebeat
     restart: unless-stopped
     user: root
     command: ["filebeat", "-e", "--strict.perms=false"]
     volumes:
       - ./filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
-      - /var/log/nginx:/var/log/nginx:ro
       - filebeat-data:/usr/share/filebeat/data
+{% if filebeat_source == 'nginx' %}
+      - /var/log/nginx:/var/log/nginx:ro
+{% elif filebeat_source == 'docker' %}
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+{% elif filebeat_source == 'syslog' %}
+      # The whole directory: a single-file mount would lose the file after log rotation
+      - /var/log:/var/log:ro
+{% endif %}
 
 volumes:
   filebeat-data:

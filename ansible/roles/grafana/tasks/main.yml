@@ -46,3 +46,16 @@
     chdir: /opt/grafana
   register: compose_up
   changed_when: "'Started' in compose_up.stderr or 'Recreated' in compose_up.stderr"
+
+- name: Create the alerting provisioning directory
+  ansible.builtin.file:
+    path: /opt/grafana/provisioning/alerting
+    state: directory
+    mode: "0755"
+
+- name: Deploy alert rules
+  ansible.builtin.copy:
+    src: alerts.yml
+    dest: /opt/grafana/provisioning/alerting/alerts.yml
+    mode: "0644"
+  notify: Restart Grafana

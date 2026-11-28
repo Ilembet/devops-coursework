@@ -23,13 +23,6 @@
     - docker
     - kibana
 
-- name: Ship nginx logs with Filebeat
-  hosts: web
-  become: true
-  roles:
-    - docker
-    - filebeat
-
 - name: Configure Grafana
   hosts: grafana
   become: true
@@ -44,3 +37,10 @@
   roles:
     - node_exporter
     - prometheus
+
+- name: Ship logs with Filebeat
+  hosts: all
+  become: true
+  roles:
+    - docker
+    - filebeat

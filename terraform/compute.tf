@@ -87,10 +87,11 @@ resource "yandex_compute_instance" "web" {
 
 # Monitoring: Prometheus in a private subnet, Grafana in a public one.
 resource "yandex_compute_instance" "prometheus" {
-  name        = "prometheus"
-  hostname    = "prometheus"
-  platform_id = "standard-v3"
-  zone        = var.zones[0]
+  name               = "prometheus"
+  hostname           = "prometheus"
+  platform_id        = "standard-v3"
+  zone               = var.zones[0]
+  service_account_id = var.vm_puller_sa_id
 
   resources {
     cores         = 2
