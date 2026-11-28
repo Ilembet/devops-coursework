@@ -7,6 +7,9 @@ services:
       - "3000:3000"
     environment:
       GF_SECURITY_ADMIN_PASSWORD: "{{ grafana_admin_password }}"
+      # Reviewers can look at dashboards without a login, read-only
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
     volumes:
       - ./provisioning:/etc/grafana/provisioning:ro
       - ./dashboards:/etc/grafana/dashboards:ro

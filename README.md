@@ -1,13 +1,73 @@
 # devops-coursework
 
-Курсовая работа «DevOps-инженер с нуля»: отказоустойчивая инфраструктура сайта в Yandex Cloud (Terraform + Ansible) с мониторингом (Prometheus, Grafana), логами (Elasticsearch, Filebeat, Kibana), bastion-хостом и ежедневными снапшотами.
+Курсовая работа по профессии «DevOps-инженер с нуля»: отказоустойчивая инфраструктура сайта в Yandex Cloud
+с мониторингом, сбором логов и резервным копированием. Инфраструктура описана в Terraform, настройка ВМ — в Ansible.
 
-## Структура
+## Доступ для проверки
 
-- `terraform/` — инфраструктура: сеть, ВМ, балансировщик, снапшоты
-- `ansible/` — настройка ВМ: nginx, exporters, Prometheus, Grafana, Elasticsearch, Kibana, Filebeat
-- `docs/` — скриншоты, вывод команд, решения и компромиссы
+| Ресурс | Адрес | Вход |
+| --- | --- | --- |
+| Сайт (через Application Load Balancer) | http://62.84.118.222 | — |
+| Grafana | http://84.252.134.225:3000 | без входа, роль Viewer; дашборд Dashboards → Coursework |
+| Kibana | http://84.201.151.18:5601 | без входа; Discover, data view `filebeat-*` |
 
-## Статус
+Адреса актуальны на дату сдачи: стек поднимается заново по запросу, и публичные IP при этом меняются.
+Текущие адреса печатает `scripts/links.sh`.
 
-В работе. Этапы и решения описаны в `docs/`.
+## Что сделано
+
+- Две одинаковые ВМ с nginx в зонах `ru-central1-a` и `ru-central1-d` за Application Load Balancer:
+  Target Group, Backend Group с healthcheck `/` на порт 80, HTTP router, listener на порту 80.
+- Мониторинг: Prometheus, node_exporter на всех ВМ, prometheus-nginxlog-exporter на web, Grafana с дашбордом
+  USE (CPU, RAM, диск, сеть) и HTTP-метриками, пороги на всех панелях.
+- Логи: Elasticsearch и Kibana, Filebeat отправляет `access.log` и `error.log` nginx.
+- Сеть: один VPC, web, Prometheus и Elasticsearch в приватных подсетях (выход через NAT), Grafana, Kibana и
+  балансировщик в публичных. Группы безопасности открывают только нужные порты, ssh — только с bastion.
+- Резервное копирование: ежедневные снапшоты дисков всех ВМ, хранение 7 дней.
+- Дополнительно: оповещения Grafana (4 правила) и логи самих Elasticsearch, Kibana, Grafana и Prometheus в Elasticsearch.
+
+**Решение по этапам, проверки, скриншоты и компромиссы: [docs/README.md](docs/README.md).**
+
+## Архитектура
+
+| Хост | Зона | Подсеть | Роль |
+| --- | --- | --- | --- |
+| bastion | a | публичная | единственная точка входа по ssh |
+| web-1, web-2 | a, d | приватные | nginx, node_exporter, nginx-log-exporter, Filebeat |
+| prometheus | a | приватная | Prometheus |
+| grafana | d | публичная | Grafana (Docker) |
+| elasticsearch | d | приватная | Elasticsearch (Docker) |
+| kibana | d | публичная | Kibana (Docker) |
+
+## Структура репозитория
+
+| Путь | Что внутри |
+| --- | --- |
+| `terraform/` | сеть, группы безопасности, ВМ, балансировщик, расписание снапшотов |
+| `ansible/` | роли: nginx, node_exporter, nginx_log_exporter, prometheus, docker, grafana, elasticsearch, kibana, filebeat |
+| `scripts/` | генерация ssh-конфига и инвентаря Ansible из outputs Terraform, вывод ссылок |
+| `docs/` | решение по этапам и скриншоты |
+
+## Как поднять с нуля
+
+Нужны: Terraform ≥ 1.6.3, Ansible, `yc` с профилем облака, сервисные аккаунты `terraform-sa` и `vm-puller`,
+бакет для состояния и образы в Container Registry (см. [docs/README.md](docs/README.md), этапы 0 и 4).
+
+```bash
+source terraform/env.sh
+cd terraform && terraform init && terraform apply && cd ..
+scripts/ssh-config.sh
+scripts/inventory.sh
+read -rsp "Grafana admin password: " GRAFANA_ADMIN_PASSWORD; echo; export GRAFANA_ADMIN_PASSWORD
+cd ansible && ansible-playbook site.yml && cd ..
+scripts/links.sh
+```
+
+Удаление (снапшоты Terraform не удаляет, поэтому сначала они):
+
+```bash
+yc compute snapshot list --folder-name coursework --format json \
+  | python3 -c 'import json,sys; [print(s["id"]) for s in json.load(sys.stdin)]' \
+  | xargs -r -n1 yc compute snapshot delete --folder-name coursework
+cd terraform && terraform destroy
+```
