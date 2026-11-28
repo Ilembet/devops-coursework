@@ -57,3 +57,7 @@ output "kibana_private_ip" {
 output "kibana_public_ip" {
   value = yandex_compute_instance.kibana.network_interface[0].nat_ip_address
 }
+
+output "snapshot_schedule_id" {
+  value = yandex_compute_snapshot_schedule.daily.id
+}

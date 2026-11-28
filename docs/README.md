@@ -14,7 +14,7 @@
 | 4 | Образы Elastic и Grafana в Yandex Container Registry | готово |
 | 5 | Мониторинг: Prometheus, exporters, Grafana | готово |
 | 6 | Логи: Elasticsearch, Filebeat, Kibana | готово |
-| 7 | Резервное копирование: снапшоты дисков | в работе |
+| 7 | Резервное копирование: снапшоты дисков | готово |
 | 8 | Дополнительно (по желанию) | впереди |
 | 9 | Итоговое оформление | впереди |
 
@@ -123,7 +123,30 @@ error-лога). В Kibana создан data view `filebeat-*`, в Discover ви
 ![индексы Elasticsearch и счётчики логов](screenshots/stage6-02-es-indices.png)
 ![Kibana Discover](screenshots/stage6-03-kibana-discover.png)
 
-## Этапы 7–9
+## Этап 7. Резервное копирование
+
+- Расписание снапшотов `course-daily` (`yandex_compute_snapshot_schedule`): каждый день в 01:00 UTC,
+  хранение 7 дней (`retention_period = 168h`), в расписании загрузочные диски всех 7 ВМ.
+- Время задаётся переменной `snapshot_cron`, поэтому расписание можно проверить без ожидания ночи:
+  `terraform apply -var "snapshot_cron=<минуты> <часы> * * *"`, затем обычный `terraform apply` возвращает ежедневное.
+
+Файл: `terraform/backup.tf`.
+
+Проверка: расписание активно и включает 7 дисков; при временном расписании через несколько минут появились
+7 снапшотов в статусе `READY`.
+
+![расписание и диски](screenshots/stage7-01-snapshot-schedule.png)
+![снапшоты созданы](screenshots/stage7-02-snapshots-ready.png)
+
+Снапшоты не управляются Terraform и переживают `terraform destroy`, поэтому перед удалением стека их удаляю:
+
+```bash
+yc compute snapshot list --folder-name coursework --format json \
+  | python3 -c 'import json,sys; [print(s["id"]) for s in json.load(sys.stdin)]' \
+  | xargs -r -n1 yc compute snapshot delete --folder-name coursework
+```
+
+## Этапы 8–9
 
 Будут описаны по мере выполнения.
 
@@ -139,6 +162,7 @@ error-лога). В Kibana создан data view `filebeat-*`, в Discover ви
 | Прерываемые ВМ, 20% vCPU | Экономия бюджета учебного облака | ВМ может быть остановлена облаком |
 | Одна ВМ Elasticsearch | Достаточно по заданию | Нет отказоустойчивости слоя логов |
 | Безопасность Elasticsearch отключена | ES в приватной подсети, порт 9200 открыт только группам Kibana и web | Kibana открыта без пароля; в реальном проекте нужны TLS и пользователи |
+| Хранение снапшотов 7 дней при квоте 32 снапшота | Так требует задание | 7 дисков × 7 дней = 49 > 32: при круглосуточной работе нужна большая квота |
 | Elasticsearch и Kibana в зоне d, SSD 10 ГБ, 20% vCPU | Квоты пробного облака по зонам: 2 vCPU с учётом доли, HDD 20 ГБ, SSD 10–30 ГБ | Медленный старт (несколько минут) |
 
 ## Как поднять с нуля

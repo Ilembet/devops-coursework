@@ -38,3 +38,9 @@ variable "vm_puller_sa_id" {
   description = "ID of the vm-puller service account (pulls images from the container registry)"
   type        = string
 }
+
+variable "snapshot_cron" {
+  description = "When to take snapshots, cron in UTC (default: every day at 01:00 UTC)"
+  type        = string
+  default     = "0 1 * * *"
+}
