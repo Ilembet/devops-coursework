@@ -128,6 +128,13 @@ resource "yandex_vpc_security_group" "grafana" {
   }
 
   ingress {
+    description    = "node_exporter from the Prometheus subnet"
+    protocol       = "TCP"
+    port           = 9100
+    v4_cidr_blocks = [local.private_cidrs[var.zones[0]]]
+  }
+
+  ingress {
     description       = "SSH from the bastion"
     protocol          = "TCP"
     port              = 22
@@ -162,6 +169,13 @@ resource "yandex_vpc_security_group" "elasticsearch" {
   }
 
   ingress {
+    description       = "node_exporter from Prometheus"
+    protocol          = "TCP"
+    port              = 9100
+    security_group_id = yandex_vpc_security_group.prometheus.id
+  }
+
+  ingress {
     description       = "SSH from the bastion"
     protocol          = "TCP"
     port              = 22
@@ -186,6 +200,13 @@ resource "yandex_vpc_security_group" "kibana" {
     protocol       = "TCP"
     port           = 5601
     v4_cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description       = "node_exporter from Prometheus"
+    protocol          = "TCP"
+    port              = 9100
+    security_group_id = yandex_vpc_security_group.prometheus.id
   }
 
   ingress {

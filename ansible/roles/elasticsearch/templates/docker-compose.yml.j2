@@ -1,0 +1,18 @@
+# Managed by Ansible.
+# Single node, security disabled: the VM is in a private subnet and port 9200
+# is reachable only from the kibana and web security groups.
+services:
+  elasticsearch:
+    image: cr.yandex/crp2bs15dcqdoprk9u7b/elasticsearch:8.19.0
+    restart: unless-stopped
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: "-Xms1g -Xmx1g"
+    ports:
+      - "9200:9200"
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+
+volumes:
+  es-data:

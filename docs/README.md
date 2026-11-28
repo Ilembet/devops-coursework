@@ -13,8 +13,8 @@
 | 3 | Сайт: две ВМ с nginx и Application Load Balancer | готово |
 | 4 | Образы Elastic и Grafana в Yandex Container Registry | готово |
 | 5 | Мониторинг: Prometheus, exporters, Grafana | готово |
-| 6 | Логи: Elasticsearch, Filebeat, Kibana | в работе |
-| 7 | Резервное копирование: снапшоты дисков | впереди |
+| 6 | Логи: Elasticsearch, Filebeat, Kibana | готово |
+| 7 | Резервное копирование: снапшоты дисков | в работе |
 | 8 | Дополнительно (по желанию) | впереди |
 | 9 | Итоговое оформление | впереди |
 
@@ -26,8 +26,8 @@
 | web-1, web-2 | a, d | приватные 10.10.10.0/24, 10.10.11.0/24 | 80 от ALB, 9100 и 4040 от Prometheus, 22 от bastion |
 | prometheus | a | приватная | 9090 от Grafana, 22 от bastion |
 | grafana | d | публичная 10.10.1.0/24 | 3000 из интернета, 22 от bastion |
-| elasticsearch | — | приватная | 9200 от Kibana и web, 22 от bastion (этап 6) |
-| kibana | — | публичная | 5601 из интернета, 22 от bastion (этап 6) |
+| elasticsearch | d | приватная | 9200 от Kibana и web, 9100 от Prometheus, 22 от bastion |
+| kibana | d | публичная | 5601 из интернета, 9100 от Prometheus, 22 от bastion |
 | ALB | a, d | публичные | 80 из интернета, проверки состояния Яндекса |
 
 Приватные ВМ не имеют публичных адресов и выходят в интернет через NAT-шлюз.
@@ -104,7 +104,26 @@ SSH к любой ВМ разрешён только из группы безо�
 ![дашборд CPU и RAM](screenshots/stage5-04-grafana-cpu-ram.png)
 ![дашборд сеть и HTTP](screenshots/stage5-05-grafana-net-http.png)
 
-## Этапы 6–9
+## Этап 6. Логи
+
+- ВМ `elasticsearch` (приватная подсеть) и `kibana` (публичная), обе в зоне d. Elasticsearch 8.19 в Docker в режиме
+  single-node, Kibana 8.19 в Docker подключена к нему.
+- Filebeat в Docker на обеих web-ВМ читает `/var/log/nginx/access.log` и `/var/log/nginx/error.log` и отправляет их
+  в Elasticsearch. Поле `log_type` (`nginx-access` / `nginx-error`) разделяет логи, `agent.name` показывает ВМ.
+- Общая роль `docker` ставит Docker и входит в реестр токеном сервисного аккаунта ВМ; ей пользуются Grafana,
+  Elasticsearch, Kibana и Filebeat.
+
+Файлы: `terraform/compute.tf`, `ansible/roles/{docker,elasticsearch,kibana,filebeat}/`.
+
+Проверка: в Elasticsearch появился поток данных `filebeat-8.19.0` (около 3 600 записей access-лога и записи
+error-лога). В Kibana создан data view `filebeat-*`, в Discover видны логи `web-1` и `web-2`. Большая часть
+записей — проверки состояния балансировщика (`Envoy/HC`).
+
+![ansible: все хосты failed=0](screenshots/stage6-01-ansible-recap.png)
+![индексы Elasticsearch и счётчики логов](screenshots/stage6-02-es-indices.png)
+![Kibana Discover](screenshots/stage6-03-kibana-discover.png)
+
+## Этапы 7–9
 
 Будут описаны по мере выполнения.
 
@@ -119,6 +138,8 @@ SSH к любой ВМ разрешён только из группы безо�
 | Метрики nginx с префиксом `nginx_` | Так экспортёр задаёт namespace | Имена отличаются от задания префиксом |
 | Прерываемые ВМ, 20% vCPU | Экономия бюджета учебного облака | ВМ может быть остановлена облаком |
 | Одна ВМ Elasticsearch | Достаточно по заданию | Нет отказоустойчивости слоя логов |
+| Безопасность Elasticsearch отключена | ES в приватной подсети, порт 9200 открыт только группам Kibana и web | Kibana открыта без пароля; в реальном проекте нужны TLS и пользователи |
+| Elasticsearch и Kibana в зоне d, SSD 10 ГБ, 20% vCPU | Квоты пробного облака по зонам: 2 vCPU с учётом доли, HDD 20 ГБ, SSD 10–30 ГБ | Медленный старт (несколько минут) |
 
 ## Как поднять с нуля
 

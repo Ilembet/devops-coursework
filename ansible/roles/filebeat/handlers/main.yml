@@ -1,0 +1,6 @@
+---
+- name: Restart Filebeat
+  ansible.builtin.command: docker compose restart filebeat
+  args:
+    chdir: /opt/filebeat
+  changed_when: true

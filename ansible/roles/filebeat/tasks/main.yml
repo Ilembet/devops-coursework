@@ -1,0 +1,26 @@
+---
+- name: Create the Filebeat directory
+  ansible.builtin.file:
+    path: /opt/filebeat
+    state: directory
+    mode: "0755"
+
+- name: Deploy filebeat.yml
+  ansible.builtin.template:
+    src: filebeat.yml.j2
+    dest: /opt/filebeat/filebeat.yml
+    mode: "0644"
+  notify: Restart Filebeat
+
+- name: Deploy docker-compose.yml
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: /opt/filebeat/docker-compose.yml
+    mode: "0644"
+
+- name: Start Filebeat
+  ansible.builtin.command: docker compose up -d
+  args:
+    chdir: /opt/filebeat
+  register: compose_up
+  changed_when: "'Started' in compose_up.stderr or 'Recreated' in compose_up.stderr"

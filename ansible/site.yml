@@ -7,16 +7,40 @@
     - node_exporter
     - nginx_log_exporter
 
-- name: Configure Prometheus
-  hosts: prometheus
+- name: Configure Elasticsearch
+  hosts: elasticsearch
   become: true
   roles:
     - node_exporter
-    - prometheus
+    - docker
+    - elasticsearch
+
+- name: Configure Kibana
+  hosts: kibana
+  become: true
+  roles:
+    - node_exporter
+    - docker
+    - kibana
+
+- name: Ship nginx logs with Filebeat
+  hosts: web
+  become: true
+  roles:
+    - docker
+    - filebeat
 
 - name: Configure Grafana
   hosts: grafana
   become: true
   roles:
     - node_exporter
+    - docker
     - grafana
+
+- name: Configure Prometheus
+  hosts: prometheus
+  become: true
+  roles:
+    - node_exporter
+    - prometheus

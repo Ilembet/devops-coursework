@@ -1,0 +1,9 @@
+# Managed by Ansible.
+services:
+  kibana:
+    image: cr.yandex/crp2bs15dcqdoprk9u7b/kibana:8.19.0
+    restart: unless-stopped
+    environment:
+      ELASTICSEARCH_HOSTS: '["http://{{ hostvars[groups['elasticsearch'][0]].ansible_host }}:9200"]'
+    ports:
+      - "5601:5601"
